@@ -105,7 +105,6 @@ class Snake(GameObject):
         # Использовал deque, тк добавление в начало deque
         # со сложностью O(1), а у списков O(n).
         self.positions = deque((self.position,))
-        self.length = len(self.positions) - 1
         self.last = None
 
     def update_direction(self):
