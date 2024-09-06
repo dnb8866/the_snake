@@ -152,9 +152,7 @@ class Snake(GameObject):
 
     def calculate_max_length(self) -> None:
         """Calculate the length of the snake."""
-        self.max_length = (len(self.positions)
-                           if len(self.positions) > self.max_length
-                           else self.max_length)
+        self.max_length = max(len(self.positions), self.max_length)
 
 
 def change_speed(value: int) -> None:
