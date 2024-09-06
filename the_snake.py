@@ -20,6 +20,27 @@ APPLE_COLOR = (0, 255, 0)
 POISON_COLOR = (255, 0, 0)
 SNAKE_COLOR = (0, 0, 255)
 
+ALL_CELLS = set(
+            (pos_x, pos_y)
+            for pos_x in range(0, SCREEN_WIDTH, GRID_SIZE)
+            for pos_y in range(0, SCREEN_HEIGHT, GRID_SIZE)
+        )
+
+DIRECTION_MAPPING_KEY = {
+        (pg.K_UP, LEFT): UP,
+        (pg.K_UP, RIGHT): UP,
+        (pg.K_DOWN, LEFT): DOWN,
+        (pg.K_DOWN, RIGHT): DOWN,
+        (pg.K_LEFT, UP): LEFT,
+        (pg.K_LEFT, DOWN): LEFT,
+        (pg.K_RIGHT, UP): RIGHT,
+        (pg.K_RIGHT, DOWN): RIGHT
+    }
+SPEED_MAPPING_KEY = {
+        pg.K_q: 1,
+        pg.K_z: -1
+    }
+
 speed = 10
 
 screen = pg.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
@@ -35,7 +56,11 @@ class GameObject:
         self.body_color = body_color
 
     def draw_cell(self, position: tuple, body_color: tuple = None) -> None:
-        """Draw the cell on the screen."""
+        """
+        Draw the cell on the screen.
+        :param position: position of the cell
+        :param body_color: color of the cell
+        """
         body_color = body_color or self.body_color
         rect = pg.Rect(position, (GRID_SIZE, GRID_SIZE))
         pg.draw.rect(screen, body_color, rect)
@@ -50,27 +75,16 @@ class GameObject:
 class Apple(GameObject):
     """Class representing an apple on the game board."""
 
-    def __init__(self, *used_cells, body_color: tuple = APPLE_COLOR) -> None:
+    def __init__(self, used_cells: tuple, body_color: tuple = APPLE_COLOR) -> None:
         super().__init__(body_color=body_color)
-        self.used_cells = set(used_cells)
-        self.randomize_position(*used_cells)
+        self.randomize_position(used_cells)
 
-    def randomize_position(self, *args) -> None:
+    def randomize_position(self, used_cells: tuple) -> None:
         """
         Randomly generate a position for the item on the game board.
-        :param args: Used cells. Tuple.
+        :param used_cells: Used cells.
         """
-        all_cells = set(
-            (pos_x, pos_y)
-            for pos_x in range(0, SCREEN_WIDTH, GRID_SIZE)
-            for pos_y in range(0, SCREEN_HEIGHT, GRID_SIZE)
-        )
-        used_cells = set(args) or self.used_cells
-        unused_cells = all_cells - used_cells
-
-        position = choice(tuple(unused_cells))
-        self.position = (position if position not in used_cells
-                         else self.randomize_position())
+        self.position = choice(tuple(ALL_CELLS - set(used_cells)))
 
     def draw(self):
         """Draw the object on the screen."""
@@ -80,9 +94,9 @@ class Apple(GameObject):
 class Poison(Apple):
     """Class representing a poison on the game board."""
 
-    def __init__(self, *used_cells, body_color: tuple = POISON_COLOR) -> None:
-        super().__init__(body_color=body_color)
-        self.randomize_position(*used_cells)
+    def __init__(self, used_cells: tuple, body_color: tuple = POISON_COLOR) -> None:
+        super().__init__(used_cells, body_color=body_color)
+        self.randomize_position(used_cells)
 
 
 class Snake(GameObject):
@@ -90,11 +104,7 @@ class Snake(GameObject):
 
     def __init__(self, body_color: tuple = SNAKE_COLOR) -> None:
         super().__init__(body_color)
-        self.direction = RIGHT
-        self.body_color = body_color
-        self.positions = [self.position]
-        self.last = None
-        self._max_length = 1
+        self.reset()
 
     def update_direction(self, direction: tuple) -> None:
         """
@@ -122,32 +132,27 @@ class Snake(GameObject):
         when calculating the head position.
         :return: tuple of x and y coordinates of the snake's head.
         """
+        if not direction:
+            return self.positions[0]
         current_x_pos, current_y_pos = self.positions[0]
-        if direction:
-            direction_x, direction_y = direction
-            return (
-                (current_x_pos + direction_x * GRID_SIZE) % SCREEN_WIDTH,
-                (current_y_pos + direction_y * GRID_SIZE) % SCREEN_HEIGHT
-            )
-        else:
-            return current_x_pos, current_y_pos
+        direction_x, direction_y = direction
+        return (
+            (current_x_pos + direction_x * GRID_SIZE) % SCREEN_WIDTH,
+            (current_y_pos + direction_y * GRID_SIZE) % SCREEN_HEIGHT
+        )
 
     def reset(self) -> None:
-        """Reset the snake to its initial position."""
+        """Reset the snake."""
         self.direction = RIGHT
         self.positions = [self.position]
         self.last = None
+        self.max_length = 1
 
-    @property
-    def max_length(self) -> int:
-        """
-        Get the maximum length of the snake.
-        :return: Maximum length of the snake.
-        """
-        self._max_length = (len(self.positions)
-                            if len(self.positions) > self._max_length
-                            else self._max_length)
-        return self._max_length
+    def calculate_max_length(self) -> None:
+        """Calculate the length of the snake."""
+        self.max_length = (len(self.positions)
+                            if len(self.positions) > self.max_length
+                            else self.max_length)
 
 
 def change_speed(value: int) -> None:
@@ -175,21 +180,6 @@ def handle_keys(game_object: Snake):
     Handle keyboard input to control the game object.
     :param game_object: Game object to control.
     """
-    direction_mapping = {
-        (pg.K_UP, LEFT): UP,
-        (pg.K_UP, RIGHT): UP,
-        (pg.K_DOWN, LEFT): DOWN,
-        (pg.K_DOWN, RIGHT): DOWN,
-        (pg.K_LEFT, UP): LEFT,
-        (pg.K_LEFT, DOWN): LEFT,
-        (pg.K_RIGHT, UP): RIGHT,
-        (pg.K_RIGHT, DOWN): RIGHT
-    }
-    speed_mapping = {
-        pg.K_q: 1,
-        pg.K_z: -1
-    }
-
     for event in pg.event.get():
         if event.type == pg.QUIT:
             pg.quit()
@@ -198,18 +188,17 @@ def handle_keys(game_object: Snake):
             if event.key == pg.K_ESCAPE:
                 pg.quit()
                 raise SystemExit
+            if event.key in SPEED_MAPPING_KEY:
+                change_speed(
+                    SPEED_MAPPING_KEY.get(event.key)
+                )
             else:
-                if event.key in speed_mapping:
-                    change_speed(
-                        speed_mapping.get(event.key)
+                game_object.update_direction(
+                    DIRECTION_MAPPING_KEY.get(
+                        (event.key, game_object.direction),
+                        game_object.direction
                     )
-                else:
-                    game_object.update_direction(
-                        direction_mapping.get(
-                            (event.key, game_object.direction),
-                            game_object.direction
-                        )
-                    )
+                )
 
 
 def main():
@@ -221,8 +210,8 @@ def main():
     screen.fill(BOARD_BACKGROUND_COLOR)
 
     snake = Snake()
-    apple = Apple(*snake.positions)
-    poison = Poison(*snake.positions)
+    apple = Apple(snake.positions)
+    poison = Poison((*snake.positions, apple.position))
 
     while True:
         handle_keys(snake)
@@ -232,22 +221,25 @@ def main():
 
         if snake_head_position in snake.positions[1:]:
             snake.reset()
-            apple.randomize_position(*snake.positions)
-            poison.randomize_position(*snake.positions, apple.position)
+            snake.calculate_max_length()
+            apple.randomize_position(snake.positions)
+            poison.randomize_position((*snake.positions, apple.position))
             screen.fill(color=BOARD_BACKGROUND_COLOR)
         elif snake_head_position == apple.position:
             snake.positions.insert(0, snake.get_head_position())
-            apple.randomize_position(*snake.positions)
+            snake.calculate_max_length()
+            apple.randomize_position(snake.positions)
             poison.draw_cell(poison.position, BOARD_BACKGROUND_COLOR)
-            poison.randomize_position(*snake.positions, apple.position)
+            poison.randomize_position((*snake.positions, apple.position))
         elif snake_head_position == poison.position:
             if len(snake.positions) > 1:
                 snake.draw_cell(
                     snake.positions.pop(), BOARD_BACKGROUND_COLOR
                 )
+                snake.calculate_max_length()
             apple.draw_cell(apple.position, BOARD_BACKGROUND_COLOR)
-            apple.randomize_position(*snake.positions)
-            poison.randomize_position(*snake.positions, apple.position)
+            apple.randomize_position(snake.positions)
+            poison.randomize_position((*snake.positions, apple.position))
 
         snake.draw()
         apple.draw()
