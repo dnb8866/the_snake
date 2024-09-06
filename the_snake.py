@@ -21,25 +21,25 @@ POISON_COLOR = (255, 0, 0)
 SNAKE_COLOR = (0, 0, 255)
 
 ALL_CELLS = set(
-            (pos_x, pos_y)
-            for pos_x in range(0, SCREEN_WIDTH, GRID_SIZE)
-            for pos_y in range(0, SCREEN_HEIGHT, GRID_SIZE)
-        )
+    (pos_x, pos_y)
+    for pos_x in range(0, SCREEN_WIDTH, GRID_SIZE)
+    for pos_y in range(0, SCREEN_HEIGHT, GRID_SIZE)
+)
 
 DIRECTION_MAPPING_KEY = {
-        (pg.K_UP, LEFT): UP,
-        (pg.K_UP, RIGHT): UP,
-        (pg.K_DOWN, LEFT): DOWN,
-        (pg.K_DOWN, RIGHT): DOWN,
-        (pg.K_LEFT, UP): LEFT,
-        (pg.K_LEFT, DOWN): LEFT,
-        (pg.K_RIGHT, UP): RIGHT,
-        (pg.K_RIGHT, DOWN): RIGHT
-    }
+    (pg.K_UP, LEFT): UP,
+    (pg.K_UP, RIGHT): UP,
+    (pg.K_DOWN, LEFT): DOWN,
+    (pg.K_DOWN, RIGHT): DOWN,
+    (pg.K_LEFT, UP): LEFT,
+    (pg.K_LEFT, DOWN): LEFT,
+    (pg.K_RIGHT, UP): RIGHT,
+    (pg.K_RIGHT, DOWN): RIGHT
+}
 SPEED_MAPPING_KEY = {
-        pg.K_q: 1,
-        pg.K_z: -1
-    }
+    pg.K_q: 1,
+    pg.K_z: -1
+}
 
 speed = 10
 
@@ -75,7 +75,8 @@ class GameObject:
 class Apple(GameObject):
     """Class representing an apple on the game board."""
 
-    def __init__(self, used_cells: tuple, body_color: tuple = APPLE_COLOR) -> None:
+    def __init__(self, used_cells: tuple = (),
+                 body_color: tuple = APPLE_COLOR) -> None:
         super().__init__(body_color=body_color)
         self.randomize_position(used_cells)
 
@@ -94,7 +95,8 @@ class Apple(GameObject):
 class Poison(Apple):
     """Class representing a poison on the game board."""
 
-    def __init__(self, used_cells: tuple, body_color: tuple = POISON_COLOR) -> None:
+    def __init__(self, used_cells: tuple,
+                 body_color: tuple = POISON_COLOR) -> None:
         super().__init__(used_cells, body_color=body_color)
         self.randomize_position(used_cells)
 
@@ -151,8 +153,8 @@ class Snake(GameObject):
     def calculate_max_length(self) -> None:
         """Calculate the length of the snake."""
         self.max_length = (len(self.positions)
-                            if len(self.positions) > self.max_length
-                            else self.max_length)
+                           if len(self.positions) > self.max_length
+                           else self.max_length)
 
 
 def change_speed(value: int) -> None:
